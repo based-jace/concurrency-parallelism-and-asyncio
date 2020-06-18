@@ -1,0 +1,10 @@
+# Python env
+env/
+
+# Generated files
+*/concurrency/sync/*
+*/concurrency/threading/*
+*/concurrency/async/*
+
+*/parallelism/sync/*
+*/parallelism/multiprocessing/*
