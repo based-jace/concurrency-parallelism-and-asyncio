@@ -144,7 +144,10 @@ For those not familiar with the `async`/`await` syntax that can be found in many
 
 `async for` (not used here) iterates over an [asynchronous stream](https://stackoverflow.com/questions/56161595/how-to-use-async-for-in-python).
 
-*TODO: Aside about the event loop*
+### The Event Loop
+Event loops are constructs inherent to asynchronous programming that allow performing tasks asynchronously. As you're reading this article, I can safely assume you're probably not too familiar with the concept, but whether you've written an async application or not, you have experience with event loops everytime you use a computer, be it through your computer listening for keyboard input, playing multiplayer games, or browsing Reddit while you have files copying in the background. In its purest essence, an event loop is something that waits around for triggers and then performs specific (programmed) actions once those triggers are met. They often return a "promise" (JavaScript syntax) or "future" (Python syntax) of some sort to denote that a task has been added to them, and then they later return a value (assuming the called function does return a value) once the task has been completed. The idea of performing a function in response to another function is called a "callback."
+
+*For another take on callbacks and events, [here's a great answer on StackOverflow](https://stackoverflow.com/questions/9596276/how-to-explain-callbacks-in-plain-english-how-are-they-different-from-calling-o/9652434#9652434).*
 
 Here's a walkthrough of our function:
 
@@ -174,7 +177,7 @@ As you can see, we've declared it with "async." We then create an empty list cal
 
 And that's all we need to do. Now, running our program (the source of which includes the same timing functionality of the synchronous and threading examples)...
 
-```python
+```bash
 Writing "albuquerque fiddlehaus" to "./async/new_file1.txt"...
 Writing "euroreggaebop" to "./async/new_file2.txt"...
 Writing "shoedisco" to "./async/new_file0.txt"...
@@ -194,13 +197,93 @@ If you want to learn more about what distinguishes Python's implementation of th
 
 For even better examples and explanations of threading in Python, here's [a video by Corey Schafer](https://www.youtube.com/watch?v=IEEhzQoKtQU) that goes more in-depth, including using the `concurrent.futures` library.
 
-Lastly, for a massive deep-dive into asyncio itself, here's [an article from RealPython](https://realpython.com/async-io-python/) completely dedicated to it.
+Lastly, for a massive deep-dive into asyncio itself, here's [an article from Real Python](https://realpython.com/async-io-python/) completely dedicated to it.
 
 ## Parallelism
 *What is it?*
 
 Parallelism is very-much related to concurrency. In fact, parallelism is a subset of concurrency: whereas a concurrent process performs multiple tasks at the same time whether they're being diverted total attention or not, a parallel process is physically performing multiple tasks all at the same time. A good example would be driving, listening to music, and eating the BLT we made in the last section. 
 
-Because they don't require a lot of intensive effort, you can do them all at once without having to wait on anything or divert your attention away.
+Because they don't require a lot of intensive effort, you can do them all at once without having to wait on anything or divert your attention away. 
 
+Now let's take a look at how to implement this in Python. We could use the `multiprocessing` library, but let's use the `concurrent.futures` library instead -- it eliminates the need to manage your number of process manually. Because the major benefit of multiprocessing happens when you perform multiple cpu-heavy tasks, we're going to compute the squares of 1 million (1000000) to 1 million and 16 (1000016).
 
+*For those of you already familiar with the concept of threading/multithreading in general, multiprocessing is Python's way to have that functionality. Regular Python threads are unable to accomplish this due to something called the Global Interpreter Lock (GIL), and it's necessary as CPython's (Python's default implementation) memory management is not thread safe.*
+
+*More info about Python's GIL and thread safety can be found on [Real Python](https://realpython.com/python-gil/) and Python's [official docs](https://docs.python.org/2.0/api/threads.html).*
+
+The only import we'll need is `concurrent.futures`.
+
+```python
+import concurrent.futures
+
+if __name__ == "__main__":
+    pow_list = [i for i in range(1000000, 1000016)]
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        futures = [executor.submit(pow, i, i) for i in pow_list]
+
+    for f in concurrent.futures.as_completed(futures):
+        print('okay')
+```
+
+Because I'm developing on a Windows machine, I'm using `if __name__ == "main"`. This is necessary because Windows does not have the `fork` system call [inherent to Unix systems](https://stackoverflow.com/questions/57535979/concurrent-future-fails-on-windows). Because Windows doesn't have this capability, it resorts to launching a new interpreter with each process that tries to import the main module. If the main module doesn't exist, it reruns your whole program, causing recursive chaos to ensue.
+
+So taking a look at our main function, we use list comprehension to create a list from 1 million to 1 million and 16, we open a ProcessPoolExecutor with concurrent.futures, and we use list comprehension and `ProcessPoolExecutor().submit()` to start executing our processes, and throwing them into a list called "futures." 
+
+*We can also use `ThreadPoolExecutor()` if we wanted to use threads instead -- concurrent.futures is versatile.*
+
+And this is where the asynchronicity comes in: The "results" list does not actually contain the results from running our functions. Instead, it contains "futures" which are similar to the JavaScript idea of "promises." In order to allow our program to continue running, we get back these futures that represent a placeholder for a value. If we try to print the future, depending on whether it's finished running or not, we will either get back a state of "pending" or "finished." Once it's finished we can get the return value (assuming there is one) using `var.result()`. In this case, our var will be "result." 
+
+We then iterate through our list of futures, but instead of printing our values, we are simply printing out "okay." This is just because of how massive the resulting calculations come out to be.
+
+Just as before, I built a comparison script that does this synchronously. And just as before, you can find it on [GitHub](https://github.com/based-jace/concurrency-parallelism-and-asyncio).
+
+Running our control program (which also includes functionality for timing our program) we get:
+
+```bash
+Starting...
+okay
+...
+okay
+Time to complete: 54.64
+```
+
+Wow. 54.64 is quite a long time. Let's see if our version with multiprocessing does any better:
+
+```bash
+Starting...
+okay
+...
+okay
+Time to complete: 6.24
+```
+
+Our time has been *significantly* reduced. We're at about 1/9th of our original time.
+
+*So what would happen if we used threading for this instead?*
+
+I'm sure you can guess -- it wouldn't be much faster. In fact, it might be slower because it still takes a little time and effort to spin up new threads. But don't take my word for it, here's what we get when we replace `ProcessPoolExecutor()` with `ThreadPoolExecutor()`:
+
+```bash
+Starting...
+okay
+...
+okay
+Time to complete: 53.83
+```
+
+As I mentioned earlier, threading allows your applications to focus on new tasks while others are waiting. In this case, we're never sitting idly by. Multiprocessing, on the other hand, spins up totally new services, usually on separate CPU cores, ready to do whatever you ask it completely in tandem with whatever else your script is doing. This is why the multiprocessing version taking roughly 1/9th of the time makes sense -- I have 8 cores in my CPU.
+
+Now that we've talked about concurrency and parallelism in Python, we can finally set the terms straight. If you're have trouble distinguish the terms, you can safely and accurately think of our previous definition of "parallelism" as "parallel concurrency" and our "concurrency" as "non-parallel concurrency."
+
+### Further Reading
+Real Python has a great article on [concurrency vs parallelism](https://realpython.com/python-concurrency/).
+
+Engineer Man has a good video comparison of [threading vs multiprocessing](https://www.youtube.com/watch?v=ecKWiaHCEKs).
+
+Corey Schafer also has a good [video on multiprocessing](https://www.youtube.com/watch?v=fKl2JW_qrso&t=127s) in the same spirit as his threading video.
+
+*Recap: When to use multiprocessing vs asyncio or threading*
+
+Use multiprocessing when you need to do many heavy calculations and you can split them up. Use asyncio or threading when you're performing I/O operations -- communicating with external resources or reading/writing from/to files.

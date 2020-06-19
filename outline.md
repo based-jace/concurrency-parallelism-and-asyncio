@@ -45,10 +45,10 @@
     * Recap
 
 ### Resources
-<!-- * Asynchronous Python - https://medium.com/@nhumrich/asynchronous-python-45df84b82434 -->
+* Asynchronous Python - https://medium.com/@nhumrich/asynchronous-python-45df84b82434
 * Threading vs Multiprocessing in Python - https://www.youtube.com/watch?v=ecKWiaHCEKs
 * Multiprocessing in Python - https://www.youtube.com/watch?v=fKl2JW_qrso&t=127s
-<!-- * Threading in Python - https://www.youtube.com/watch?v=IEEhzQoKtQU -->
+* Threading in Python - https://www.youtube.com/watch?v=IEEhzQoKtQU
 * More on Concurrency and Parallelism in Python - https://realpython.com/python-concurrency/
 * Python's Global Interpreter Lock (GIL) - https://realpython.com/python-gil/
-<!-- * asyncio - https://realpython.com/async-io-python/ -->
+* asyncio - https://realpython.com/async-io-python/

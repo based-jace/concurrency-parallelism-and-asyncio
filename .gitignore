@@ -1,5 +1,5 @@
 # VS Code
-# .vscode/
+.vscode/
 
 # Python env
 env/
@@ -8,6 +8,3 @@ env/
 */concurrency/sync/*
 */concurrency/threading/*
 */concurrency/async/*
-
-*/parallelism/sync/*
-*/parallelism/multiprocessing/*
