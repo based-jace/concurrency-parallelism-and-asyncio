@@ -5,8 +5,8 @@
 * How concurreny and parallelism differ
 * asyncio vs threading vs multiprocessing
     * Python examples of each
-* Concurrency, parallelism, and asynchronicity in Python vs other languages
-* Global Interpreter Lock
+* `async`/`await` in Python vs other languages
+* Global Interpreter Lock (GIL)
 
 ## Outline
 1. Intro - Concurrency and Parallelism
@@ -31,24 +31,12 @@
     * multiprocessing
     * When to use multiprocessing vs threading or asyncio
 4. Comparison to other languages
-    1. How different languages differ with concurrency and parallelism
-    2. How different languages tackle async/await
-    * Languages to compare Python with
-        * .NET - F# to C#
-        * JavaScript
-        * Ruby
-        * C/C++
-        * Java
-        * Go
-        * Rust
+    * .NET - F# to C#
+    * JavaScript
+    * Rust
+    * Go
+    * Ruby
+    * Java
+    * C/C++
 5. Outro
     * Recap
-
-### Resources
-* Asynchronous Python - https://medium.com/@nhumrich/asynchronous-python-45df84b82434
-* Threading vs Multiprocessing in Python - https://www.youtube.com/watch?v=ecKWiaHCEKs
-* Multiprocessing in Python - https://www.youtube.com/watch?v=fKl2JW_qrso&t=127s
-* Threading in Python - https://www.youtube.com/watch?v=IEEhzQoKtQU
-* More on Concurrency and Parallelism in Python - https://realpython.com/python-concurrency/
-* Python's Global Interpreter Lock (GIL) - https://realpython.com/python-gil/
-* asyncio - https://realpython.com/async-io-python/

@@ -287,3 +287,171 @@ Corey Schafer also has a good [video on multiprocessing](https://www.youtube.com
 *Recap: When to use multiprocessing vs asyncio or threading*
 
 Use multiprocessing when you need to do many heavy calculations and you can split them up. Use asyncio or threading when you're performing I/O operations -- communicating with external resources or reading/writing from/to files.
+
+## Async/Await in Other Languages
+`async`/`await` and similar syntax also exists in other languages, and in some of those languages, its implementation can differ drastically.
+
+### .NET: F# to C#
+The first programming language (back in 2007) to use the async syntax was Microsoft's F#. Whereas it doesn't exactly use `await` to wait on a function call, it uses specific syntax like `let!` and `do!` along with proprietary `Async` functions included in the `System` module.
+
+*You can find more about async programming in F# on [Microsoft's F# docs](https://docs.microsoft.com/en-us/dotnet/fsharp/tutorials/asynchronous-and-concurrent-programming/async)*
+
+Their C# team then built upon this concept, and that's where the `async`/`await` that we are now familiar with was born: 
+
+```c#
+using System;
+
+// Allows the "Task" return type
+using System.Threading.Tasks;
+					
+public class Program
+{
+    // Declare an async function with "async"
+	private static async Task<string> ReturnHello()
+	{
+		return "hello world";
+	}
+	
+    // Main can be async -- no problem
+	public static async Task Main()
+	{
+        // await an async string
+		string result = await ReturnHello();
+		
+        // Print the string we got asynchronously
+		Console.WriteLine(result);
+	}
+}
+```
+
+*[Run it on .NETFiddle](https://dotnetfiddle.net/N9rO8Y)*
+
+We ensure that we are `using System.Threading.Tasks` as it includes the `Task` type, and, in general, the `Task` type is needed in order for an async function to be awaited. The cool thing about C# is that you can make your main function asynchronous just by declaring it with `async`, and you won't have any issues.
+
+If you're interested in learning more about `async`/`await` in C#, [Microsoft's C# docs](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/async/) have a good page on it.
+
+### JavaScript
+First introduced in ES6, the `async`/`await` syntax is essentially an abstraction over JavaScript promises (which are similar to Python futures). Unlike Python, however, so long as you're not awaiting, you can call an async function normally without a specific function like Python's `asyncio.start()`:
+
+```javascript
+// Declare a function with async
+async function returnHello(){
+	return "hello world";
+}
+
+async function printSomething(){
+    // await an async string
+	const result = await returnHello();
+    
+    // print the string we got asynchronously
+    console.log(result);
+}
+
+// Run our async code
+printSomething();
+```
+
+*[Run it on JSFiddle](https://jsfiddle.net/kyamcp1o/1/)*
+
+*See MDN for more info on [`async`/`await` in JavaScript](https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Asynchronous/Async_await).*
+
+### Rust
+Rust now allows the use of the `async`/`await` syntax as well, and it works similarly to Python, C#, and JavaScript:
+
+```rust
+// Allows blocking synchronous code to run async code
+use futures::executor::block_on;
+
+// Declare an async function with "async"
+async fn return_hello() -> String {
+    "hello world".to_string()
+}
+
+// Code that awaits must also be declared with "async"
+async fn print_something(){
+    // await an async String
+    let result: String = return_hello().await;
+
+    // Print the string we got asynchronously 
+    println!("{0}", result); 
+}
+
+fn main() {
+    // Block the current synchronous execution to run our async code
+    block_on(print_something()); 
+}
+```
+
+*[Run it on Rust Play](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&code=%2F%2F%20Allows%20blocking%20synchronous%20code%20to%20run%20async%20code%0Ause%20futures%3A%3Aexecutor%3A%3Ablock_on%3B%0A%0A%2F%2F%20Declare%20an%20async%20function%20with%20%22async%22%0Aasync%20fn%20return_hello()%20-%3E%20String%20%7B%0A%20%20%20%20%22hello%20world%22.to_string()%0A%7D%0A%0A%2F%2F%20Code%20that%20awaits%20must%20also%20be%20declared%20with%20%22async%22%0Aasync%20fn%20print_something()%7B%0A%20%20%20%20%2F%2F%20await%20an%20async%20String%0A%20%20%20%20let%20result%3A%20String%20%3D%20return_hello().await%3B%0A%0A%20%20%20%20%2F%2F%20Print%20the%20string%20we%20got%20asynchronously%20%0A%20%20%20%20println!(%22%7B0%7D%22%2C%20result)%3B%20%0A%7D%0A%0Afn%20main()%20%7B%0A%20%20%20%20%2F%2F%20Block%20the%20current%20synchronous%20execution%20to%20run%20our%20async%20code%0A%20%20%20%20block_on(print_something())%3B%20%0A%7D)*
+
+In order to use async functions, we must first add `futures = "0.3"` to our Cargo.toml. We then import the `block_on` function with `use futures::executor::block_on` -- the `block_on` is necessary in order to run our async function from our synchronous `main` function.
+
+*You can find more info on [`async`/`await` in Rust](https://rust-lang.github.io/async-book/01_getting_started/01_chapter.html) in the Rust docs.*
+
+### Go
+Rather than the traditional `async`/`await` syntax inherent to all of the previous languages we've covered, Go uses "goroutines" and "channels." You can think of a channel as being similar to a Python future. In Go, you generally send a channel as an argument to a function, then use `go` to run the function concurrently. Whenever you need to ensure the function has finished completing, you use the `<-` syntax, which you can think of as the more common `await` syntax. If your goroutine (the function you're running asynchronously) has a return value, it can be grabbed this way.
+
+```go
+package main
+
+import "fmt"
+
+// "chan" makes the return value a string channel instead of a string
+func returnHello(result chan string){
+	// Gives our channel a value
+	result <- "hello world"
+}
+
+func main() {
+	// Creates a string channel
+	result := make(chan string)
+	
+	// Starts execution of our goroutine
+	go returnHello(result)
+	
+	// Awaits and prints our string
+	fmt.Println(<- result)
+}
+```
+
+*[Run it in the Go Playground](https://play.golang.org/p/4hkgIunl2-E)*
+
+*For more info on concurrency in Go, see [An Introduction to Programming in Go](https://www.golang-book.com/books/intro/10) by Caleb Doxsey.*
+
+### Ruby
+Similarly to Python, Ruby also has the Global Interpreter Lock limitation. What it doesn't have is concurrency built-in to the language. However, there is a community-created gem that allows concurrency in Ruby, and you can find its [source on GitHub](https://github.com/ruby-concurrency/concurrent-ruby).
+
+### Java
+Like Ruby, Java doesn't have the `async`/`await` syntax built-in, but it does have concurrency capabilities using the `java.util.concurrent` module. However, [Electronic Arts wrote an Async library](https://github.com/electronicarts/ea-async) that allows using `await` as a method. It's not exactly the same as Python/C#/JavaScript/Rust, but it's worth looking into if you're a Java developer and are interested in this sort of functionality.
+
+# C++
+Although C++ also doesn't have the `async`/`await` syntax, it does have the ability to use futures to run code concurrently using the `futures` module:
+
+```cpp
+#include <iostream>       
+#include <string>         
+
+// Necessary for futures
+#include <future>     
+
+// No async declaration needed
+std::string return_hello() {
+    return "hello world";
+}
+
+int main ()
+{
+    // Declares a string future
+    std::future<std::string> fut = std::async(return_hello);
+    
+    // Awaits the result of the future
+    std::string result = fut.get();      
+    
+    // Prints the string we got asynchronously
+    std::cout << result << '\n';
+}
+```
+
+*[Run it on C++ Shell](http://www.cpp.sh/)*
+
+There's no need to declare a function with any keyword to denote whether or not it can and should be run asynchronously. Instead, you declare your initial future whenever you need it with `std::future<{{ function return type }}>` setting it equal to `std::async()`, including the name of the function you want to perform asynchronously along with any arguments it takes, i.e. `std::async(do_something, 1, 2, "string")`. To await the value of the future, use the `.get()` syntax on your future.
