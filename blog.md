@@ -455,3 +455,12 @@ int main ()
 *[Run it on C++ Shell](http://www.cpp.sh/)*
 
 There's no need to declare a function with any keyword to denote whether or not it can and should be run asynchronously. Instead, you declare your initial future whenever you need it with `std::future<{{ function return type }}>` setting it equal to `std::async()`, including the name of the function you want to perform asynchronously along with any arguments it takes, i.e. `std::async(do_something, 1, 2, "string")`. To await the value of the future, use the `.get()` syntax on your future.
+
+*You can find documentation for [async in C++](https://www.cplusplus.com/reference/future/async/) on cplusplus.com*
+
+## Summary
+Whether you're working with asynchronous network or file operations or you're performing numerous complex calculations, there are a few different ways to maximize your code's efficiency. 
+
+If you're using Python, you can use `asyncio` or `threading` to make the most out of async operations or the `multithreading` module for CPU-intensive code.
+
+If you're using another programming language, chances are there's an implementation of `async`/`await` for it.
