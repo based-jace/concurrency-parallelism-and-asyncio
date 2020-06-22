@@ -37,6 +37,6 @@
     * Go
     * Ruby
     * Java
-    * C/C++
+    * C++
 5. Outro
     * Recap

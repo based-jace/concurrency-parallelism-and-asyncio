@@ -1,15 +1,15 @@
 # Concurrency, Parallelism, and asyncio
 
 ## Intro and Overview
-*What is concurrency and parallelism, and how do they apply to Python?*
+*What are concurrency and parallelism, and how do they apply to Python?*
 
-There are many reasons your applications can be slow. Sometimes this is due to poor algorithmic design or the wrong choice of data structure. Sometimes, however, it's due to forces outside of our control, such as hardware constraints or the quirks of networking. That's where concurrency and parallelism fit in. They allow your programs to do multiple things at once, either at the same time, or by wasting the least possible time waiting on busy tasks.
+There are many reasons your applications can be slow. Sometimes this is due to poor algorithmic design or the wrong choice of data structure. Sometimes, however, it's due to forces outside of our control, such as hardware constraints or the quirks of networking. That's where concurrency and parallelism fit in. They allow your programs to do multiple things at once, either at the same time or by wasting the least possible time waiting on busy tasks.
 
 Whether you're dealing with external web resources, reading from and writing to multiple files, or need to use a calculation-intensive function multiple times with different parameters, this post should help you maximize the efficiency and speed of your code.
 
-First we'll delve into what concurrency and parallelism actually are and how they fit into the realm of Python using standard libraries such as threading, multiprocessing, and asyncio. The last portion of the post will compare Python's implementation of these concepts with how other languages have implemented them.
+First, we'll delve into what concurrency and parallelism are and how they fit into the realm of Python using standard libraries such as threading, multiprocessing, and asyncio. The last portion of this post will compare Python's implementation of `async`/`awai` with how other languages have implemented them.
 
-*This post assumes you already know how to work with http requests*
+*This post assumes you already know how to work with HTTP requests*
 
 You can find all the code examples from this post in the [concurrency-parallelism-and-asyncio](https://github.com/based-jace/concurrency-parallelism-and-asyncio) repo on GitHub.
 
@@ -32,7 +32,7 @@ In Python, there are a few different ways to achieve concurrency. The first we'l
 
 *For our examples in this section, we're going to build a small Python program that grabs a random music genre from [Binary Jazz's Genrenator API](https://binaryjazz.us/genrenator-api/) 5 times, prints the genre to the screen, and puts each one into its own file.*
 
-To work with threading in Python, the only import you'll need is `threading`, but for this example, I've also import `urllib` to work with http requests, `time` to determine how long the functions take to complete, and `json` to easily convert the json data returned from the Genrenator API.
+To work with threading in Python, the only import you'll need is `threading`, but for this example, I've also imported `urllib` to work with HTTP requests, `time` to determine how long the functions take to complete, and `json` to easily convert the json data returned from the Genrenator API.
 
 Let's start with a simple function:
 
@@ -53,7 +53,7 @@ def write_genre(file_name):
 
 Examining the code above, we're making a request to the Genrenator API, loading its JSON response (a random music genre), printing it, then writing it to a file.
 
-*(without the "User-Agent" header you receive a 304)*
+*Without the "User-Agent" header you will receive a 304.*
 
 What we're really interested in is the next section, where the actual threading happens:
 
@@ -72,17 +72,26 @@ for thread in threads:
     thread.join()
 ```
 
-We first start with a list. We then proceed to iterate 5 times, creating a new thread each time. We then start each thread, append it to our "threads" list, and iterate over our list once more just to join each thread. 
+We first start with a list. We then proceed to iterate 5 times, creating a new thread each time. Next, we start each thread, append it to our "threads" list, and then iterate over our list one last time to join each thread. 
 
 Explanation: Creating threads in Python is easy. 
 
-To create a new thread, use `threading.Thread()`. You can pass into it the kwarg (keyword argument) "target" with a value of whatever function you would like to run on that thread. But only pass in the name of the function, not its value (meaning, for our purposes, `write_genre` and not `write_genre()`). To pass arguments, pass in "kwargs" (which takes a dict) or "args" (which takes an iterable).
+To create a new thread, use `threading.Thread()`. You can pass into it the kwarg (keyword argument) "target" with a value of whatever function you would like to run on that thread. But only pass in the name of the function, not its value (meaning, for our purposes, `write_genre` and not `write_genre()`). To pass arguments, pass in "kwargs" (which takes a dict of your kwargs) or "args" (which takes an iterable containing your args -- in this case a list).
 
-Creating a thread is not the same as starting a thread, however. To do that, simply use `{the name of your thread}.start()`. Starting a thread just means starting its execution.
+Creating a thread is not the same as starting a thread, however. To start your thread, use `{the name of your thread}.start()`. Starting a thread means "starting its execution."
 
-Lastly, when we join threads with `thread.join()`, all we're doing is telling it to make sure the thread has finished before continuing on with our code.
+Lastly, when we join threads with `thread.join()`, all we're doing is ensuring the thread has finished before continuing on with our code.
 
-Before we show the potential speed improvement over non-threaded code, I took the liberty of also creating a non-threaded version of the same program (again, available on [GitHub](https://github.com/based-jace/concurrency-parallelism-and-asyncio)). Instead of creating a new thread and joining each one, it instead just calls `write_genre` in a for loop that iterates 5 times. 
+### Threads
+*But what exactly is a thread?*
+
+A thread is a way of allowing your computer to break up a single process/program into many lightweight pieces that execute in parallel. Somewhat confusingly, Python's standard implementation of threading limits threads to only being able to execute one at a time due to something called the Global Interpreter Lock (GIL). The GIL is necessary because CPython's (Python's default implementation) memory management is not thread-safe. Because of this limitation, threading in Python is concurrent, but not parallel. To get around this, Python has a separate `multiprocessing` module not limited by the GIL that spins up separate processes, enabling parallel execution of your code. Using the `multiprocessing` module is nearly identical to using the `threading` module.
+
+*More info about Python's GIL and thread safety can be found on [Real Python](https://realpython.com/python-gil/) and Python's [official docs](https://docs.python.org/2.0/api/threads.html).*
+
+*We'll take a more in-depth look at multiprocessing in Python shortly.*
+
+Before we show the potential speed improvement over non-threaded code, I took the liberty of also creating a non-threaded version of the same program (again, available on [GitHub](https://github.com/based-jace/concurrency-parallelism-and-asyncio)). Instead of creating a new thread and joining each one, it instead calls `write_genre` in a for loop that iterates 5 times. 
 
 *To compare speed benchmarks, I also imported the `time` library to time the execution of our scripts.*
 
@@ -96,7 +105,7 @@ Writing "dutch hate industrialtune" to "./sync/new_file4.txt"...
 Time to complete synchronous read/writes: 1.42 seconds
 ```
 
-Running the script, we see that it takes my computer around 1.49 seconds (along with classic music genres such as "dutch hate industrialtune"). Not too bad.
+Upon running the script, we see that it takes my computer around 1.49 seconds (along with classic music genres such as "dutch hate industrialtune"). Not too bad.
 
 Now let's run the version we just built that uses threading:
 
@@ -112,13 +121,13 @@ Time to complete threading read/writes: 0.77 seconds
 
 The first thing that might stand out to you is the functions not being completed in order: 2 - 0 - 4 - 1 - 3
 
-This is because of the asynchronous nature of threading: as one function waits, another one begins, and so on and so forth. Because we're able to continue performing tasks while we're waiting on others to finish (either due to networking or file I/O operations), you might also have noticed that we cut our time in half: 0.76 seconds. Whereas this might not seem like a lot now, imagine the very real case of building a web application that needs to write much more data to a file or interact with much more complex web services. 
+This is because of the asynchronous nature of threading: as one function waits, another one begins, and so on. Because we're able to continue performing tasks while we're waiting on others to finish (either due to networking or file I/O operations), you may also have noticed that we cut our time roughly in half: 0.76 seconds. Whereas this might not seem like a lot now, it's easy to imagine the very real case of building a web application that needs to write much more data to a file or interact with much more complex web services. 
 
-*So if threading is so great, why don't we just end the post here?*
+*So, if threading is so great, why don't we end the post here?*
 
-Because there are even better ways to perform tasks concurrently. Let's take a look at an example using asyncio. For this method, we're going to install `aiohttp` using pip -- this will allow us to make non-blocking requests and receive responses using the `async`/`await` syntax that will be introduced shortly. It also has the extra benefit of a function that converts a json response without needing to import the json library. We'll also install and import `aiofiles`, which allows non-blocking file operations. Other than `aiohttp` and `aiofiles`, import `asyncio`, which comes with the Python standard library.
+Because there are even better ways to perform tasks concurrently. Let's take a look at an example using asyncio. For this method, we're going to install `aiohttp` using `pip`. This will allow us to make non-blocking requests and receive responses using the `async`/`await` syntax that will be introduced shortly. It also has the extra benefit of a function that converts a JSON response without needing to import the `json` library. We'll also install and import `aiofiles`, which allows non-blocking file operations. Other than `aiohttp` and `aiofiles`, import `asyncio`, which comes with the Python standard library.
 
-*"Non-blocking" means a program doesn't have to wait for the process to complete to continue running. This is opposed to "blocking" code, which encompasses normal, synchronous I/O operations*
+*"Non-blocking" means a program will allow other threads to continue running while it's waiting. This is opposed to "blocking" code, which stops execution of your program completely. Normal, synchronous I/O operations suffer from this limitation.*
 
 Once we have our imports in place, let's take a look at the asynchronous version of the `write_genre` function from our threading example:
 
@@ -138,22 +147,24 @@ async def write_genre(file_name):
         await new_file.write(genre)
 ```
 
-For those not familiar with the `async`/`await` syntax that can be found in many other modern languages, `async` declares that a function, for loop, or with statement **must** be used asynchronously. To call an async function, you must either use the `await` keyword from another async function or call `create_task()` directly from the event loop, which can be grabbed from `asyncio.get_event_loop()`, i.e. `loop = asyncio.get_event_loop()`.
+For those not familiar with the `async`/`await` syntax that can be found in many other modern languages, `async` declares that a function, `for` loop, or `with` statement **must** be used asynchronously. To call an async function, you must either use the `await` keyword from another async function or call `create_task()` directly from the event loop, which can be grabbed from `asyncio.get_event_loop()`, i.e. `loop = asyncio.get_event_loop()`.
 
 `async with` allows awaiting async responses and file operations.
 
 `async for` (not used here) iterates over an [asynchronous stream](https://stackoverflow.com/questions/56161595/how-to-use-async-for-in-python).
 
 ### The Event Loop
-Event loops are constructs inherent to asynchronous programming that allow performing tasks asynchronously. As you're reading this article, I can safely assume you're probably not too familiar with the concept, but whether you've written an async application or not, you have experience with event loops everytime you use a computer, be it through your computer listening for keyboard input, playing multiplayer games, or browsing Reddit while you have files copying in the background. In its purest essence, an event loop is something that waits around for triggers and then performs specific (programmed) actions once those triggers are met. They often return a "promise" (JavaScript syntax) or "future" (Python syntax) of some sort to denote that a task has been added to them, and then they later return a value (assuming the called function does return a value) once the task has been completed. The idea of performing a function in response to another function is called a "callback."
+Event loops are constructs inherent to asynchronous programming that allow performing tasks concurrently. As you're reading this article, I can safely assume you're probably not too familiar with the concept. However, whether you've written an async application or not, you have experience with event loops every time you use a computer, whether your computer is listening for keyboard input, you're playing online multiplayer games, or you're browsing Reddit while you have files copying in the background. In its purest essence, an event loop is a process that waits around for triggers and then performs specific (programmed) actions once those triggers are met. They often return a "promise" (JavaScript syntax) or "future" (Python syntax) of some sort to denote that a task has been added. Once the task is finished, the promise or future returns a value passed back from the called function (assuming the function does return a value).
+
+The idea of performing a function in response to another function is called a "callback."
 
 *For another take on callbacks and events, [here's a great answer on StackOverflow](https://stackoverflow.com/questions/9596276/how-to-explain-callbacks-in-plain-english-how-are-they-different-from-calling-o/9652434#9652434).*
 
 Here's a walkthrough of our function:
 
-We're using `async with` to open our client session asynchronously. The `aiohttp.ClientSession()` class is what allows us to make http requests and remain connected to a source without blocking the running of our code. We then make an async request to the Genrenator API and await the JSON response (a random music genre). In the next line, we use `async with` again with the `aiofiles` library to asynchronously open a new file to write our new genre to. We print the genre, then write it to the file. 
+We're using `async with` to open our client session asynchronously. The `aiohttp.ClientSession()` class is what allows us to make HTTP requests and remain connected to a source without blocking the execution of our code. We then make an async request to the Genrenator API and await the JSON response (a random music genre). In the next line, we use `async with` again with the `aiofiles` library to asynchronously open a new file to write our new genre to. We print the genre, then write it to the file. 
 
-Unlike regular Python scripts, programming with asyncio pretty much enforces using some sort of "main" function. This is because you need to use the "async" keyword in order to use the "await" syntax, and the "await" syntax is the only way to actually perform tasks asynchronously.
+Unlike regular Python scripts, programming with asyncio pretty much enforces using some sort of "main" function. This is because you need to use the "async" keyword in order to use the "await" syntax, and the "await" syntax is the only way to actually run other async functions.
 
 *unless you're using the deprecated "yield" syntax with the @asyncio.coroutine decorator, [which will be removed in Python 3.10](https://docs.python.org/3/library/asyncio-task.html).*
 
@@ -171,7 +182,7 @@ async def main():
 asyncio.run(main())
 ```
 
-As you can see, we've declared it with "async." We then create an empty list called "tasks" to house our async tasks (calls to Genrenator and our file I/O). We append our tasks to our list, but they are *not* actually run yet. The calls don't actually get made until we schedule them with `await asyncio.gather(*tasks)`. This runs all of the tasks in our list and waits for them to finish before continuing with therest of our program. Lastly, we use `asyncio.run(main())` to run our "main" function. The `.run()` function is the entry point for our program, [and should only be called once](https://docs.python.org/3/library/asyncio-task.html#running-an-asyncio-program).
+As you can see, we've declared it with "async." We then create an empty list called "tasks" to house our async tasks (calls to Genrenator and our file I/O). We append our tasks to our list, but they are *not* actually run yet. The calls don't actually get made until we schedule them with `await asyncio.gather(*tasks)`. This runs all of the tasks in our list and waits for them to finish before continuing with the rest of our program. Lastly, we use `asyncio.run(main())` to run our "main" function. The `.run()` function is the entry point for our program, [and it should generally only be called once](https://docs.python.org/3/library/asyncio-task.html#running-an-asyncio-program).
 
 *For those not familiar, the * in front of tasks is called "argument unpacking." Just as it sounds, it unpacks our list into a series of arguments for our function. Our function is `asyncio.gather()` in this case*
 
@@ -190,10 +201,121 @@ we see it's even faster still. And, in general, the asyncio method will always b
 
 *So when should I use threading, and when should I use asyncio?*
 
-When you're writing new code, use asyncio. If you're needing to interface with older libraries or those that don't support asyncio, you might be better off with threading.
+When you're writing new code, use asyncio. If you need to interface with older libraries or those that don't support asyncio, you might be better off with threading.
+
+### Testing asyncio with Pytest
+It turns out testing async functions with Pytest is as easy as testing synchronous functions. Just install the `pytest-asyncio` package with `pip`, mark your tests with the `async` keyword, and apply a decorator that lets `pytest` know it's asynchronous: `@pytest.mark.asyncio`. Let's look at an example. 
+
+First, let's write an arbitrary async function in a file called "hello_asyncio.py"
+
+```python
+import asyncio # Make sure this is imported
+
+async def say_hello(name: str):
+    """ Sleeps for two seconds, then prints 'Hello, {{ name }}!' """
+    try:
+        if type(name) != str:
+            raise TypeError('"name" must be a string')
+        if name == "":
+            raise ValueError('"name" cannot be empty')
+    except (TypeError, ValueError):
+        raise
+    
+    print('Sleeping...')
+    await asyncio.sleep(2)
+    print(f"Hello, {name}!")
+```
+
+The function takes a single string argument: "name." Upon ensuring that "name" is a string with a length greater than 1, our function asynchronously sleeps for two seconds, then prints "Hello, {name}!" to the console. 
+
+*The difference between `asyncio.sleep()` and `time.sleep()` is that `asyncio.sleep()` is non-blocking.*
+
+Now let's test it with Pytest. In the same directory as "hello_asyncio.py," create a file called "test_hello_asyncio.py," then open it in your favorite text editor.
+
+Let's start with our imports:
+
+```python
+import pytest # Note: pytest-asyncio does not require a separate import
+import asyncio
+
+from hello_asyncio import say_hello
+```
+
+Then we'll create a test with proper input:
+
+```python
+@pytest.mark.parametrize('name', [
+    'Robert Paulson',
+    'Seven of Nine',
+    'x Æ a-12'
+])
+@pytest.mark.asyncio
+async def test_say_hello(name):
+    await say_hello(name)
+```
+
+Things to note:
+* The `@pytest.mark.asyncio` decorator - this lets Pytest work asynchronously
+* Our test uses the `async` syntax
+* We're `await`ing our async function as we would if we were running it outside of a test
+
+Now let's run our test with the verbose `-v` option:
+
+```bash
+pytest -v
+...
+collected 3 items
+
+test_hello_asyncio.py::test_say_hello[Robert Paulson] PASSED    [ 33%]
+test_hello_asyncio.py::test_say_hello[Seven of Nine] PASSED     [ 66%]
+test_hello_asyncio.py::test_say_hello[x \xc6 a-12] PASSED       [100%]
+```
+
+Looks good. Next we'll write a couple of tests with bad input. Back inside of "test_hello_asyncio.py," let's create a class called "TestSayHelloThrowsExceptions" 
+
+```python
+class TestSayHelloThrowsExceptions:
+    @pytest.mark.parametrize('name', [
+        '', 
+    ])
+    @pytest.mark.asyncio
+    async def test_say_hello_value_error(self, name):
+        with pytest.raises(ValueError):
+            await say_hello(name)
+
+    @pytest.mark.parametrize('name', [
+        19,
+        {'name', 'Diane'},
+        []
+    ])
+    @pytest.mark.asyncio
+    async def test_say_hello_type_error(self, name):
+        with pytest.raises(TypeError):
+            await say_hello(name)
+```
+
+Again, we decorate our tests with `@pytest.mark.asyncio`, mark our tests with the `async` syntax, then call our function with `await`.
+
+Running our tests again:
+
+```bash
+pytest -v
+...
+collected 7 items
+
+test_hello_asyncio.py::test_say_hello[Robert Paulson] PASSED                                    [ 14%]
+test_hello_asyncio.py::test_say_hello[Seven of Nine] PASSED                                     [ 28%]
+test_hello_asyncio.py::test_say_hello[x \xc6 a-12] PASSED                                       [ 42%]
+test_hello_asyncio.py::TestSayHelloThrowsExceptions::test_say_hello_value_error[] PASSED        [ 57%]
+test_hello_asyncio.py::TestSayHelloThrowsExceptions::test_say_hello_type_error[19] PASSED       [ 71%]
+test_hello_asyncio.py::TestSayHelloThrowsExceptions::test_say_hello_type_error[name1] PASSED    [ 85%]
+test_hello_asyncio.py::TestSayHelloThrowsExceptions::test_say_hello_type_error[name2] PASSED    [100%]
+```
+
+*If you're interested, here's [a more advanced tutorial on asyncio testing](https://stefan.sofa-rockers.org/2016/03/10/advanced-asyncio-testing/)*
 
 ### Further Reading
-If you want to learn more about what distinguishes Python's implementation of threadings vs asyncio, here's a [great article from Medium](https://medium.com/@nhumrich/asynchronous-python-45df84b82434).
+If you want to learn more about what distinguishes Python's implementation of threading vs asyncio, here's a [great article from Medium](https://medium.com/@nhumrich/asynchronous-python-45df84b82434).
 
 For even better examples and explanations of threading in Python, here's [a video by Corey Schafer](https://www.youtube.com/watch?v=IEEhzQoKtQU) that goes more in-depth, including using the `concurrent.futures` library.
 
@@ -207,10 +329,6 @@ Parallelism is very-much related to concurrency. In fact, parallelism is a subse
 Because they don't require a lot of intensive effort, you can do them all at once without having to wait on anything or divert your attention away. 
 
 Now let's take a look at how to implement this in Python. We could use the `multiprocessing` library, but let's use the `concurrent.futures` library instead -- it eliminates the need to manage your number of process manually. Because the major benefit of multiprocessing happens when you perform multiple cpu-heavy tasks, we're going to compute the squares of 1 million (1000000) to 1 million and 16 (1000016).
-
-*For those of you already familiar with the concept of threading/multithreading in general, multiprocessing is Python's way to have that functionality. Regular Python threads are unable to accomplish this due to something called the Global Interpreter Lock (GIL), and it's necessary as CPython's (Python's default implementation) memory management is not thread safe.*
-
-*More info about Python's GIL and thread safety can be found on [Real Python](https://realpython.com/python-gil/) and Python's [official docs](https://docs.python.org/2.0/api/threads.html).*
 
 The only import we'll need is `concurrent.futures`.
 
@@ -227,19 +345,19 @@ if __name__ == "__main__":
         print('okay')
 ```
 
-Because I'm developing on a Windows machine, I'm using `if __name__ == "main"`. This is necessary because Windows does not have the `fork` system call [inherent to Unix systems](https://stackoverflow.com/questions/57535979/concurrent-future-fails-on-windows). Because Windows doesn't have this capability, it resorts to launching a new interpreter with each process that tries to import the main module. If the main module doesn't exist, it reruns your whole program, causing recursive chaos to ensue.
+Because I'm developing on a Windows machine, I'm using `if __name__ == "main"`. This is necessary because Windows does not have the `fork` system call [inherent to Unix systems](https://stackoverflow.com/questions/57535979/concurrent-future-fails-on-windows). Because Windows doesn't have this capability, it resorts to launching a new interpreter with each process that tries to import the main module. If the main module doesn't exist, it reruns your entire program, causing recursive chaos to ensue.
 
-So taking a look at our main function, we use list comprehension to create a list from 1 million to 1 million and 16, we open a ProcessPoolExecutor with concurrent.futures, and we use list comprehension and `ProcessPoolExecutor().submit()` to start executing our processes, and throwing them into a list called "futures." 
+So taking a look at our main function, we use list comprehension to create a list from 1 million to 1 million and 16, we open a ProcessPoolExecutor with concurrent.futures, and we use list comprehension and `ProcessPoolExecutor().submit()` to start executing our processes and throwing them into a list called "futures." 
 
-*We can also use `ThreadPoolExecutor()` if we wanted to use threads instead -- concurrent.futures is versatile.*
+*We could also use `ThreadPoolExecutor()` if we wanted to use threads instead -- concurrent.futures is versatile.*
 
 And this is where the asynchronicity comes in: The "results" list does not actually contain the results from running our functions. Instead, it contains "futures" which are similar to the JavaScript idea of "promises." In order to allow our program to continue running, we get back these futures that represent a placeholder for a value. If we try to print the future, depending on whether it's finished running or not, we will either get back a state of "pending" or "finished." Once it's finished we can get the return value (assuming there is one) using `var.result()`. In this case, our var will be "result." 
 
 We then iterate through our list of futures, but instead of printing our values, we are simply printing out "okay." This is just because of how massive the resulting calculations come out to be.
 
-Just as before, I built a comparison script that does this synchronously. And just as before, you can find it on [GitHub](https://github.com/based-jace/concurrency-parallelism-and-asyncio).
+Just as before, I built a comparison script that does this synchronously. And, just as before, [you can find it on GitHub](https://github.com/based-jace/concurrency-parallelism-and-asyncio).
 
-Running our control program (which also includes functionality for timing our program) we get:
+Running our control program, which also includes functionality for timing our program, we get:
 
 ```bash
 Starting...
@@ -249,7 +367,7 @@ okay
 Time to complete: 54.64
 ```
 
-Wow. 54.64 is quite a long time. Let's see if our version with multiprocessing does any better:
+Wow. 54.64 seconds is quite a long time. Let's see if our version with multiprocessing does any better:
 
 ```bash
 Starting...
@@ -275,7 +393,7 @@ Time to complete: 53.83
 
 As I mentioned earlier, threading allows your applications to focus on new tasks while others are waiting. In this case, we're never sitting idly by. Multiprocessing, on the other hand, spins up totally new services, usually on separate CPU cores, ready to do whatever you ask it completely in tandem with whatever else your script is doing. This is why the multiprocessing version taking roughly 1/9th of the time makes sense -- I have 8 cores in my CPU.
 
-Now that we've talked about concurrency and parallelism in Python, we can finally set the terms straight. If you're have trouble distinguish the terms, you can safely and accurately think of our previous definition of "parallelism" as "parallel concurrency" and our "concurrency" as "non-parallel concurrency."
+Now that we've talked about concurrency and parallelism in Python, we can finally set the terms straight. If you're have trouble distinguish the terms, you can safely and accurately think of our previous definitions of "parallelism" and "concurrency" as "parallel concurrency" and  "non-parallel concurrency" respectively.
 
 ### Further Reading
 Real Python has a great article on [concurrency vs parallelism](https://realpython.com/python-concurrency/).
@@ -289,14 +407,14 @@ Corey Schafer also has a good [video on multiprocessing](https://www.youtube.com
 Use multiprocessing when you need to do many heavy calculations and you can split them up. Use asyncio or threading when you're performing I/O operations -- communicating with external resources or reading/writing from/to files.
 
 ## Async/Await in Other Languages
-`async`/`await` and similar syntax also exists in other languages, and in some of those languages, its implementation can differ drastically.
+`async`/`await` and similar syntax also exist in other languages, and in some of those languages, its implementation can differ drastically.
 
 ### .NET: F# to C#
-The first programming language (back in 2007) to use the async syntax was Microsoft's F#. Whereas it doesn't exactly use `await` to wait on a function call, it uses specific syntax like `let!` and `do!` along with proprietary `Async` functions included in the `System` module.
+The first programming language (back in 2007) to use the `async` syntax was Microsoft's F#. Whereas it doesn't exactly use `await` to wait on a function call, it uses specific syntax like `let!` and `do!` along with proprietary `Async` functions included in the `System` module.
 
 *You can find more about async programming in F# on [Microsoft's F# docs](https://docs.microsoft.com/en-us/dotnet/fsharp/tutorials/asynchronous-and-concurrent-programming/async)*
 
-Their C# team then built upon this concept, and that's where the `async`/`await` that we are now familiar with was born: 
+Their C# team then built upon this concept, and that's where the `async`/`await` that we are now familiar with were born: 
 
 ```c#
 using System;
@@ -326,7 +444,7 @@ public class Program
 
 *[Run it on .NETFiddle](https://dotnetfiddle.net/N9rO8Y)*
 
-We ensure that we are `using System.Threading.Tasks` as it includes the `Task` type, and, in general, the `Task` type is needed in order for an async function to be awaited. The cool thing about C# is that you can make your main function asynchronous just by declaring it with `async`, and you won't have any issues.
+We ensure that we are `using System.Threading.Tasks` as it includes the `Task` type, and, in general, the `Task` type is needed for an async function to be awaited. The cool thing about C# is that you can make your main function asynchronous just by declaring it with `async`, and you won't have any issues.
 
 If you're interested in learning more about `async`/`await` in C#, [Microsoft's C# docs](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/async/) have a good page on it.
 
@@ -384,7 +502,7 @@ fn main() {
 
 *[Run it on Rust Play](https://play.rust-lang.org/?version=stable&mode=debug&edition=2018&code=%2F%2F%20Allows%20blocking%20synchronous%20code%20to%20run%20async%20code%0Ause%20futures%3A%3Aexecutor%3A%3Ablock_on%3B%0A%0A%2F%2F%20Declare%20an%20async%20function%20with%20%22async%22%0Aasync%20fn%20return_hello()%20-%3E%20String%20%7B%0A%20%20%20%20%22hello%20world%22.to_string()%0A%7D%0A%0A%2F%2F%20Code%20that%20awaits%20must%20also%20be%20declared%20with%20%22async%22%0Aasync%20fn%20print_something()%7B%0A%20%20%20%20%2F%2F%20await%20an%20async%20String%0A%20%20%20%20let%20result%3A%20String%20%3D%20return_hello().await%3B%0A%0A%20%20%20%20%2F%2F%20Print%20the%20string%20we%20got%20asynchronously%20%0A%20%20%20%20println!(%22%7B0%7D%22%2C%20result)%3B%20%0A%7D%0A%0Afn%20main()%20%7B%0A%20%20%20%20%2F%2F%20Block%20the%20current%20synchronous%20execution%20to%20run%20our%20async%20code%0A%20%20%20%20block_on(print_something())%3B%20%0A%7D)*
 
-In order to use async functions, we must first add `futures = "0.3"` to our Cargo.toml. We then import the `block_on` function with `use futures::executor::block_on` -- the `block_on` is necessary in order to run our async function from our synchronous `main` function.
+In order to use async functions, we must first add `futures = "0.3"` to our Cargo.toml. We then import the `block_on` function with `use futures::executor::block_on` -- `block_on` is necessary for running our async function from our synchronous `main` function.
 
 *You can find more info on [`async`/`await` in Rust](https://rust-lang.github.io/async-book/01_getting_started/01_chapter.html) in the Rust docs.*
 
@@ -454,13 +572,15 @@ int main ()
 
 *[Run it on C++ Shell](http://www.cpp.sh/)*
 
-There's no need to declare a function with any keyword to denote whether or not it can and should be run asynchronously. Instead, you declare your initial future whenever you need it with `std::future<{{ function return type }}>` setting it equal to `std::async()`, including the name of the function you want to perform asynchronously along with any arguments it takes, i.e. `std::async(do_something, 1, 2, "string")`. To await the value of the future, use the `.get()` syntax on your future.
+There's no need to declare a function with any keyword to denote whether or not it can and should be run asynchronously. Instead, you declare your initial future whenever you need it with `std::future<{{ function return type }}>` and set it equal to `std::async()`, including the name of the function you want to perform asynchronously along with any arguments it takes, i.e. `std::async(do_something, 1, 2, "string")`. To await the value of the future, use the `.get()` syntax on it.
 
 *You can find documentation for [async in C++](https://www.cplusplus.com/reference/future/async/) on cplusplus.com*
 
 ## Summary
 Whether you're working with asynchronous network or file operations or you're performing numerous complex calculations, there are a few different ways to maximize your code's efficiency. 
 
-If you're using Python, you can use `asyncio` or `threading` to make the most out of async operations or the `multithreading` module for CPU-intensive code.
+If you're using Python, you can use `asyncio` or `threading` to make the most out of IO operations or the `multiprocessing` module for CPU-intensive code.
 
-If you're using another programming language, chances are there's an implementation of `async`/`await` for it.
+*Also remember that the `concurrent.futures` module can be used in place of either `threading` or `multiprocessing`*
+
+If you're using another programming language, chances are there's an implementation of `async`/`await` for it too.
