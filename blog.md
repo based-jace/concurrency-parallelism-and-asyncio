@@ -182,7 +182,7 @@ async def main():
 asyncio.run(main())
 ```
 
-As you can see, we've declared it with "async." We then create an empty list called "tasks" to house our async tasks (calls to Genrenator and our file I/O). We append our tasks to our list, but they are *not* actually run yet. The calls don't actually get made until we schedule them with `await asyncio.gather(*tasks)`. This runs all of the tasks in our list and waits for them to finish before continuing with the rest of our program. Lastly, we use `asyncio.run(main())` to run our "main" function. The `.run()` function is the entry point for our program, [and it should generally only be called once](https://docs.python.org/3/library/asyncio-task.html#running-an-asyncio-program).
+As you can see, we've declared it with "async." We then create an empty list called "tasks" to house our async tasks (calls to Genrenator and our file I/O). We append our tasks to our list, but they are *not* actually run yet. The calls don't actually get made until we schedule them with `await asyncio.gather(*tasks)`. This runs all of the tasks in our list and waits for them to finish before continuing with the rest of our program. Lastly, we use `asyncio.run(main())` to run our "main" function. The `.run()` function is the entry point for our program, [and it should *generally* only be called once](https://docs.python.org/3/library/asyncio-task.html#running-an-asyncio-program) *per process*.
 
 *For those not familiar, the * in front of tasks is called "argument unpacking." Just as it sounds, it unpacks our list into a series of arguments for our function. Our function is `asyncio.gather()` in this case*
 
@@ -312,6 +312,9 @@ test_hello_asyncio.py::TestSayHelloThrowsExceptions::test_say_hello_type_error[n
 test_hello_asyncio.py::TestSayHelloThrowsExceptions::test_say_hello_type_error[name2] PASSED    [100%]
 ```
 
+### Without pytest-asyncio
+
+
 *If you're interested, here's [a more advanced tutorial on asyncio testing](https://stefan.sofa-rockers.org/2016/03/10/advanced-asyncio-testing/)*
 
 ### Further Reading
@@ -381,7 +384,7 @@ Our time has been *significantly* reduced. We're at about 1/9th of our original 
 
 *So what would happen if we used threading for this instead?*
 
-I'm sure you can guess -- it wouldn't be much faster. In fact, it might be slower because it still takes a little time and effort to spin up new threads. But don't take my word for it, here's what we get when we replace `ProcessPoolExecutor()` with `ThreadPoolExecutor()`:
+I'm sure you can guess -- it wouldn't be much faster than doing it synchronously. In fact, it might be slower because it still takes a little time and effort to spin up new threads. But don't take my word for it, here's what we get when we replace `ProcessPoolExecutor()` with `ThreadPoolExecutor()`:
 
 ```bash
 Starting...
@@ -402,9 +405,128 @@ Engineer Man has a good video comparison of [threading vs multiprocessing](https
 
 Corey Schafer also has a good [video on multiprocessing](https://www.youtube.com/watch?v=fKl2JW_qrso&t=127s) in the same spirit as his threading video.
 
-*Recap: When to use multiprocessing vs asyncio or threading*
+If you only watch one video, watch this [excellent talk by Raymond Hettinger](https://www.youtube.com/watch?time_continue=1&v=9zinZmE3Ogk&feature=emb_logo). He does an amazing job explaining the differences between multiprocessing, threading, and asyncio.
 
-Use multiprocessing when you need to do many heavy calculations and you can split them up. Use asyncio or threading when you're performing I/O operations -- communicating with external resources or reading/writing from/to files.
+## Combining Asyncio with Multiprocessing
+*What if I need to combine many IO operations with heavy calculations?*
+
+We can do that too. Say you need to scrape 100 web pages for a specific piece of information, and then you need to save that piece of info in a file for later. We can separate the compute power across each of our computer's cores by making each process scrape a fraction of the pages.
+
+For this script, let's install Beautiful Soup to help us easily scrape our pages: `pip install beautifulsoup4`. This time we actually have quite a few imports. Here they are, and here's why we're using them:
+
+```python
+import asyncio                        # Gives us async/await
+import aiohttp                        # For asynchronously making HTTP requests
+import aiofiles                       # For asynchronously performing file IO operations
+import concurrent.futures             # Allows creating new processes
+from multiprocessing import cpu_count # Returns our number of CPU cores
+from bs4 import BeautifulSoup         # For easy webpage scraping
+from math import floor                # Helps divide up our requests evenly across our CPU cores
+```
+
+First, we're going to create an async function that make a request to Wikipedia to get back random pages. We will scrape each page we get back for its title using BeautifulSoup, and then we will append it to a given file; we will separate each title with a tab. The function will take two arguments:
+* num_pages - Number of pages to request and scrape for titles
+* output_file - The file to append our titles to
+
+```python
+async def get_and_scrape_pages(num_pages: int, output_file: str):
+    async with \
+    aiohttp.ClientSession() as client, \
+    aiofiles.open(output_file, "a+", encoding="utf-8") as f:
+
+        for _ in range(num_pages):
+            async with client.get('https://en.wikipedia.org/wiki/Special:Random') as response:
+                if response.status > 399:
+                    response.raise_for_status()
+                    
+                page = await response.text()
+                soup = BeautifulSoup(page, features="html.parser")
+                title = soup.find("h1").text
+
+                await f.write(title + "\t")
+                
+        await f.write("\n")
+```
+
+We're both asynchronously opening an aiohttp ClientSession and our output file. The mode, `a+`, means append to the file and create it if it doesn't already exist. Encoding our strings as utf-8 ensures we don't get an error if our titles contain international characters. If we get an error response, we will raise it instead of continuing (at high request volumes I was getting a 429 Too Many Requests). We asynchronously get the text from our response, then we parse the title and asynchronously and append it to our file. After we append all of our titles, we append a new line: "\n".
+
+Our next function is the function we'll start with each new process to allow running it asynchronously:
+
+```python
+def start_scraping(num_pages: int, output_file: str):
+    asyncio.run(get_and_scrape_pages(num_pages, output_file))
+```
+
+Now for our main function. Let's start with some constants (and our function declaration):
+```python
+def main():
+    NUM_PAGES = 100 # Number of pages to scrape altogether
+    NUM_CORES = cpu_count() # Our number of CPU cores (including logical cores)
+    OUTPUT_FILE = "./wiki_titles.tsv" # File to append our scraped titles to
+
+    PAGES_PER_CORE = floor(NUM_PAGES / NUM_CORES)
+    PAGES_FOR_FINAL_CORE = PAGES_PER_CORE + NUM_PAGES % PAGES_PER_CORE # For our final core
+```
+
+And now the logic:
+```python
+    futures = [] # To store our futures
+
+    with concurrent.futures.ProcessPoolExecutor(NUM_CORES) as executor:
+        for i in range(NUM_CORES):
+            new_future = executor.submit(
+                start_scraping, # Function to perform
+                # v Arguments v
+                num_pages=PAGES_PER_CORE,
+                output_file=OUTPUT_FILE,
+            )
+            futures.append(new_future)
+
+        futures.append(
+            executor.submit(
+                start_scraping, PAGES_FOR_FINAL_CORE, OUTPUT_FILE
+            )
+        )
+
+    concurrent.futures.wait(futures)
+```
+
+We create an array to store our futres, then we create a ProcessPoolExecutor, setting its `max_workers` equal to our number of cores. We iterate over a range equal to our number of cores minus 1, running a new process with our `start_scraping` function. We then append it our futures list. Our final core will potentially have extra work to do as it will scrape a number of pages equal to each of our other cores, but will additionally scrape a number of pages equal to the remainder that we got when dividing our total number of pages to scrape by our total number of cpu cores.
+
+Make sure to actually run your main function:
+
+```python
+if __name__ == "__main__":
+    main()
+```
+
+After running the program with my 8-core CPU (along with benchmarking code):
+
+This version (asyncio with multiprocessing): 
+```bash
+Time to complete: 5.65 seconds.
+```
+
+multiprocessing only:
+```bash
+Time to complete: 8.87 seconds.
+```
+
+asyncio only:
+```bash
+Time to complete: 47.92 seconds.
+```
+
+Completely synchronously:
+```bash
+Time to complete: 88.86 seconds.
+```
+
+I'm actually quite surprised to see that the improvement of asyncio with multiprocessing over just multiprocessing wasn't as great as I thought it would be.
+
+### Recap: When to use multiprocessing vs asyncio or threading
+
+Use multiprocessing when you need to do many heavy calculations and you can split them up. Use asyncio or threading when you're performing I/O operations -- communicating with external resources or reading/writing from/to files. Multiprocessing and asyncio can be used together, but a good rule of thumb is to fork a process before you thread/use asyncio instead of the other way around -- threads are relatively cheap compared to processes.
 
 ## Async/Await in Other Languages
 `async`/`await` and similar syntax also exist in other languages, and in some of those languages, its implementation can differ drastically.
