@@ -312,8 +312,44 @@ test_hello_asyncio.py::TestSayHelloThrowsExceptions::test_say_hello_type_error[n
 test_hello_asyncio.py::TestSayHelloThrowsExceptions::test_say_hello_type_error[name2] PASSED    [100%]
 ```
 
-### Without pytest-asyncio
+#### Without pytest-asyncio
+Alternatively to pytest-asyncio, you can create a pytest fixture that yields an asyncio event loop:
 
+```python
+@pytest.fixture
+def event_loop():
+    loop = asyncio.get_event_loop()
+    yield loop
+```
+
+Then, rather than using the `async`/`await` syntax, you create your tests as you would normal, synchronous tests:
+
+```python
+@pytest.mark.parametrize('name', [
+    'Robert Paulson',
+    'Seven of Nine',
+    'x Æ a-12'
+])
+def test_say_hello(event_loop, name):
+    event_loop.run_until_complete(say_hello(name))
+
+class TestSayHelloThrowsExceptions:
+    @pytest.mark.parametrize('name', [
+        '', 
+    ])
+    def test_say_hello_value_error(self, event_loop, name):
+        with pytest.raises(ValueError):
+            event_loop.run_until_complete(say_hello(name))
+
+    @pytest.mark.parametrize('name', [
+        19,
+        {'name', 'Diane'},
+        []
+    ])
+    def test_say_hello_type_error(self, event_loop, name):
+        with pytest.raises(TypeError):
+            event_loop.run_until_complete(say_hello(name))
+```
 
 *If you're interested, here's [a more advanced tutorial on asyncio testing](https://stefan.sofa-rockers.org/2016/03/10/advanced-asyncio-testing/)*
 
@@ -323,6 +359,8 @@ If you want to learn more about what distinguishes Python's implementation of th
 For even better examples and explanations of threading in Python, here's [a video by Corey Schafer](https://www.youtube.com/watch?v=IEEhzQoKtQU) that goes more in-depth, including using the `concurrent.futures` library.
 
 Lastly, for a massive deep-dive into asyncio itself, here's [an article from Real Python](https://realpython.com/async-io-python/) completely dedicated to it.
+
+*Bonus*: One more library you might be interested in is called [Unsync](https://medium.com/@MattGosden/tutorial-using-pythons-unsync-library-to-make-an-asynchronous-trading-bot-9ee2ae881272), expecially if you want to easily convert your currently synchronous code into asynchronous code. To use it, you install the library with pip, import it with `from unsync import unsync`, then decorate whatever currently synchronous function with `@unsync` to make it asynchronous. To await it and get its return value (which you can do anywhere -- it doesn't have to be in an async/unsync function), just call `.result()` after the function call.
 
 ## Parallelism
 *What is it?*
@@ -458,6 +496,7 @@ def start_scraping(num_pages: int, output_file: str):
 ```
 
 Now for our main function. Let's start with some constants (and our function declaration):
+
 ```python
 def main():
     NUM_PAGES = 100 # Number of pages to scrape altogether
@@ -469,6 +508,7 @@ def main():
 ```
 
 And now the logic:
+
 ```python
     futures = [] # To store our futures
 
