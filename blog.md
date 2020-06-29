@@ -462,7 +462,7 @@ Time to complete: 53.83
 
 As I mentioned earlier, threading allows your applications to focus on new tasks while others are waiting. In this case, we're never sitting idly by. Multiprocessing, on the other hand, spins up totally new services, usually on separate CPU cores, ready to do whatever you ask it completely in tandem with whatever else your script is doing. This is why the multiprocessing version taking roughly 1/9th of the time makes sense -- I have 8 cores in my CPU.
 
-Now that we've talked about concurrency and parallelism in Python, we can finally set the terms straight. If you're have trouble distinguishing between the terms, you can safely and accurately think of our previous definitions of "parallelism" and "concurrency" as "parallel concurrency" and  "non-parallel concurrency" respectively.
+Now that we've talked about concurrency and parallelism in Python, we can finally set the terms straight. If you're having trouble distinguishing between the terms, you can safely and accurately think of our previous definitions of "parallelism" and "concurrency" as "parallel concurrency" and  "non-parallel concurrency" respectively.
 
 ### Further Reading
 
