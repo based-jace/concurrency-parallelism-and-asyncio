@@ -29,6 +29,7 @@ By the end of this post, you should be able to answer the following questions:
 1. What's the difference between concurrency and parallelism?
 1. Is it possible to combine asyncio with multiprocessing?
 1. When should you use multiprocessing vs asyncio or threading?
+1. What's the difference between multiprocessing, asyncio and concurrency.futures?
 
 ## Concurrency
 
