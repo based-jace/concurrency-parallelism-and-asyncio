@@ -13,3 +13,8 @@ __pycache__/
 */concurrency/threading/*
 */concurrency/async/*
 */asyncio_and_multiprocessing/wiki_titles.tsv
+
+sync/*.txt
+async/*.txt
+threading/*.txt
+wiki_titles.tsv

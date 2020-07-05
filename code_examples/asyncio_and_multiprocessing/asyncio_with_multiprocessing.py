@@ -13,7 +13,7 @@ async def get_and_scrape_pages(num_pages: int, output_file: str):
 
     #### Arguments
     ---
-    num_pages: int - 
+    num_pages: int -
         Number of random Wikipedia pages to request and scrape
 
     output_file: str -
@@ -28,13 +28,13 @@ async def get_and_scrape_pages(num_pages: int, output_file: str):
                 if response.status > 399:
                     # I was getting a 429 Too Many Requests at a higher volume of requests
                     response.raise_for_status()
-                    
+
                 page = await response.text()
                 soup = BeautifulSoup(page, features="html.parser")
                 title = soup.find("h1").text
 
                 await f.write(title + "\t")
-                
+
         await f.write("\n")
 
 def start_scraping(num_pages: int, output_file: str, i: int):

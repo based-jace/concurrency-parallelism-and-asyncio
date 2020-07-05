@@ -11,7 +11,7 @@ def write_genre(file_name):
 
     req = Request("https://binaryjazz.us/wp-json/genrenator/v1/genre/", headers={'User-Agent': 'Mozilla/5.0'})
     genre = json.load(urlopen(req))
-    
+
     with open(file_name, "w") as new_file:
         print(f'Writing "{genre}" to "{file_name}"...')
         new_file.write(genre)
@@ -23,7 +23,7 @@ start = time.time()
 
 for i in range(5):
     thread = threading.Thread(
-        target=write_genre, 
+        target=write_genre,
         args=[f"./threading/new_file{i}.txt"]
     )
     thread.start()

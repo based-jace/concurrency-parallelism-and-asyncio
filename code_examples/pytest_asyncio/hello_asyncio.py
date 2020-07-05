@@ -9,7 +9,7 @@ async def say_hello(name: str):
             raise ValueError('"name" cannot be empty')
     except (TypeError, ValueError):
         raise
-    
+
     print('Sleeping...')
     await asyncio.sleep(2)
     print(f"Hello, {name}!")

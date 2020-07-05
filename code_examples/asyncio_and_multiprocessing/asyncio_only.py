@@ -13,7 +13,7 @@ async def get_and_scrape_pages(num_pages: int, output_file: str):
 
     #### Arguments
     ---
-    num_pages: int - 
+    num_pages: int -
         Number of random Wikipedia pages to request and scrape
 
     output_file: str -
@@ -22,19 +22,19 @@ async def get_and_scrape_pages(num_pages: int, output_file: str):
     async with \
     aiohttp.ClientSession() as client, \
     aiofiles.open(output_file, "a+", encoding="utf-8") as f:
-    
+
         for _ in range(num_pages):
             async with client.get('https://en.wikipedia.org/wiki/Special:Random') as response:
                 if response.status > 399:
                     # I was getting a 429 Too Many Requests at a higher volume of requests
                     response.raise_for_status()
-                    
+
                 page = await response.text()
                 soup = BeautifulSoup(page, features="html.parser")
                 title = soup.find("h1").text
 
                 await f.write(title + "\t")
-                
+
         await f.write("\n")
 
 async def main():
