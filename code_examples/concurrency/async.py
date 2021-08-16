@@ -1,7 +1,9 @@
-import time
 import asyncio
+import time
+
 import aiohttp
 import aiofiles
+
 
 async def write_genre(file_name):
     """
@@ -14,8 +16,9 @@ async def write_genre(file_name):
             genre = await response.json()
 
     async with aiofiles.open(file_name, "w") as new_file:
-        print(f'Writing "{genre}" to "{file_name}"...')
+        print(f"Writing '{genre}' to '{file_name}'...")
         await new_file.write(genre)
+
 
 async def main():
     tasks = []
@@ -31,4 +34,6 @@ async def main():
     end = time.time()
     print(f"Time to complete asyncio read/writes: {round(end - start, 2)} seconds")
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())

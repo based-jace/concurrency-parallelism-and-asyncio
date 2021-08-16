@@ -7,20 +7,24 @@ Blog post for [testdriven.io](https://testdriven.io/). If you want to follow alo
 
 Create and activate a new virtual environment:
 
-*Windows Powershell, assuming the Python version in your PATH is 3.8:*
+*Windows Powershell, assuming the Python version in your PATH is 3.9:*
 
 ```powershell
 PS X:> python -m venv venv
 PS X:> .\venv\Scripts\Activate.ps1
 (venv) PS X:>
+
+(venv) PS X:> pip install -r requirements.txt
 ```
 
 *Mac/Linux:*
 
 ```sh
-$ python3.8 -m venv venv
+$ python3.9 -m venv venv
 $ source venv/bin/activate
 (venv)$
+
+(venv)$ pip install -r requirements.txt
 ```
 
 ### Concurrency

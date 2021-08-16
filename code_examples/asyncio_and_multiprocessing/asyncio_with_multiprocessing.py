@@ -1,9 +1,13 @@
-import asyncio, aiohttp, aiofiles, concurrent.futures
-from multiprocessing import cpu_count
-from bs4 import BeautifulSoup
-from math import floor
-
+import asyncio
+import concurrent.futures
 import time
+from math import floor
+from multiprocessing import cpu_count
+
+import aiofiles
+import aiohttp
+from bs4 import BeautifulSoup
+
 
 async def get_and_scrape_pages(num_pages: int, output_file: str):
     """
@@ -24,7 +28,7 @@ async def get_and_scrape_pages(num_pages: int, output_file: str):
     aiofiles.open(output_file, "a+", encoding="utf-8") as f:
 
         for _ in range(num_pages):
-            async with client.get('https://en.wikipedia.org/wiki/Special:Random') as response:
+            async with client.get("https://en.wikipedia.org/wiki/Special:Random") as response:
                 if response.status > 399:
                     # I was getting a 429 Too Many Requests at a higher volume of requests
                     response.raise_for_status()
@@ -37,11 +41,13 @@ async def get_and_scrape_pages(num_pages: int, output_file: str):
 
         await f.write("\n")
 
+
 def start_scraping(num_pages: int, output_file: str, i: int):
     """ Starts an async process for requesting and scraping Wikipedia pages """
-    print(f'Process {i} starting...')
+    print(f"Process {i} starting...")
     asyncio.run(get_and_scrape_pages(num_pages, output_file))
-    print(f'Process {i} finished.')
+    print(f"Process {i} finished.")
+
 
 def main():
     NUM_PAGES = 100 # Number of pages to scrape altogether
@@ -73,7 +79,8 @@ def main():
 
     concurrent.futures.wait(futures)
 
+
 if __name__ == "__main__":
     start = time.time()
     main()
-    print(f'Time to complete: {round(time.time() - start, 2)} seconds.')
+    print(f"Time to complete: {round(time.time() - start, 2)} seconds.")
