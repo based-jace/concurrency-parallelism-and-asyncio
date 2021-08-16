@@ -1,9 +1,11 @@
-import concurrent.futures, urllib.request
-from multiprocessing import cpu_count
-from bs4 import BeautifulSoup
-from math import floor
-
+import concurrent.futures
 import time
+import urllib.request
+from math import floor
+from multiprocessing import cpu_count
+
+from bs4 import BeautifulSoup
+
 
 def get_and_scrape_pages(num_pages: int, output_file: str):
     """
@@ -21,10 +23,10 @@ def get_and_scrape_pages(num_pages: int, output_file: str):
     """
     with open(output_file, "a+", encoding="utf-8") as f:
         for _ in range(num_pages):
-            with urllib.request.urlopen('https://en.wikipedia.org/wiki/Special:Random') as response:
+            with urllib.request.urlopen("https://en.wikipedia.org/wiki/Special:Random") as response:
                 if response.status > 399:
                     # I was getting a 429 Too Many Requests at a higher volume of requests
-                    raise Exception(f'Received a {response.status} instead of 200.')
+                    raise Exception(f"Received a {response.status} instead of 200.")
 
                 page = response.read()
                 soup = BeautifulSoup(page, features="html.parser")
@@ -32,6 +34,7 @@ def get_and_scrape_pages(num_pages: int, output_file: str):
                 f.write(title + "\t")
 
         f.write("\n")
+
 
 def main():
     NUM_PAGES = 100 # Number of pages to scrape altogether
@@ -61,7 +64,8 @@ def main():
 
     concurrent.futures.wait(futures)
 
+
 if __name__ == "__main__":
     start = time.time()
     main()
-    print(f'Time to complete: {round(time.time() - start, 2)} seconds.')
+    print(f"Time to complete: {round(time.time() - start, 2)} seconds.")
