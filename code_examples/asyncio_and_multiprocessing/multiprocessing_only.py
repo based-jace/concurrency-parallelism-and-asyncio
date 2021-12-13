@@ -66,6 +66,7 @@ def main():
 
 
 if __name__ == "__main__":
+    print("Starting: Please wait (This may take a while)....")
     start = time.time()
     main()
     print(f"Time to complete: {round(time.time() - start, 2)} seconds.")

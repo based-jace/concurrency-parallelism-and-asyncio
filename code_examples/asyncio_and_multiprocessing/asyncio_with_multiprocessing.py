@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import concurrent.futures
 import time
@@ -43,6 +44,11 @@ async def get_and_scrape_pages(num_pages: int, output_file: str):
 
 
 def start_scraping(num_pages: int, output_file: str, i: int):
+    # On Windows, this finishes successfully, but throws 'RuntimeError: Event loop is closed'
+    # The following lines fix this
+    # Source: https://github.com/encode/httpx/issues/914#issuecomment-622586610
+    if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     """ Starts an async process for requesting and scraping Wikipedia pages """
     print(f"Process {i} starting...")
     asyncio.run(get_and_scrape_pages(num_pages, output_file))
@@ -81,6 +87,7 @@ def main():
 
 
 if __name__ == "__main__":
+    print("Starting: Please wait (This may take a while)....")
     start = time.time()
     main()
     print(f"Time to complete: {round(time.time() - start, 2)} seconds.")

@@ -7,7 +7,7 @@ Blog post for [testdriven.io](https://testdriven.io/). If you want to follow alo
 
 Create and activate a new virtual environment:
 
-*Windows Powershell, assuming the Python version in your PATH is 3.9:*
+*Windows Powershell, assuming the Python version in your PATH is 3.9+:*
 
 ```powershell
 PS X:> python -m venv venv
